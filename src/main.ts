@@ -1,18 +1,13 @@
+import { ItemView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import {
-	ItemView,
-	Notice,
-	Plugin,
-	TFile,
-	WorkspaceLeaf,
-} from "obsidian";
+	removeReadingListItemByPath,
+	tryAddReadingListItem,
+	type ReadingListItem,
+} from "./reading-list-logic";
 
 export const VIEW_TYPE_READING_LIST = "reading-list-view";
 
-export interface ReadingListItem {
-	path: string;
-	added: number;
-	read: boolean;
-}
+export type { ReadingListItem };
 
 interface StoredData {
 	items: ReadingListItem[];
@@ -81,7 +76,7 @@ export default class ReadingListPlugin extends Plugin {
 	async openReadingList(): Promise<void> {
 		const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_READING_LIST);
 		if (existing.length > 0) {
-			this.app.workspace.revealLeaf(existing[0]);
+			await this.app.workspace.revealLeaf(existing[0]);
 			return;
 		}
 		let leaf: WorkspaceLeaf | null = this.app.workspace.getRightLeaf(false);
@@ -89,7 +84,7 @@ export default class ReadingListPlugin extends Plugin {
 			leaf = this.app.workspace.getLeaf(true);
 		}
 		await leaf.setViewState({ type: VIEW_TYPE_READING_LIST, active: true });
-		this.app.workspace.revealLeaf(leaf);
+		await this.app.workspace.revealLeaf(leaf);
 	}
 
 	addCurrentNote(): void {
@@ -102,22 +97,19 @@ export default class ReadingListPlugin extends Plugin {
 			new Notice("Active file must be a note");
 			return;
 		}
-		if (this.items.some((i) => i.path === file.path)) {
+		const { items: next, isNew } = tryAddReadingListItem(this.items, file.path);
+		if (!isNew) {
 			new Notice("Already on reading list");
 			return;
 		}
-		this.items.push({
-			path: file.path,
-			added: Date.now(),
-			read: false,
-		});
+		this.items = next;
 		void this.persist();
 		this.refreshViews();
 		new Notice("Added to reading list");
 	}
 
 	removeItem(path: string): void {
-		this.items = this.items.filter((i) => i.path !== path);
+		this.items = removeReadingListItemByPath(this.items, path);
 		void this.persist();
 		this.refreshViews();
 	}
@@ -194,7 +186,7 @@ class ReadingListView extends ItemView {
 		this.plugin.items.forEach((item, index) => {
 			const file = this.app.vault.getAbstractFileByPath(item.path);
 			const title =
-				file instanceof TFile ? file.basename : item.path.split("/").pop() ?? item.path;
+				file instanceof TFile ? file.basename : (item.path.split("/").pop() ?? item.path);
 			const missing = !(file instanceof TFile);
 
 			const row = listEl.createDiv({

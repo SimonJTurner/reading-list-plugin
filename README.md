@@ -15,9 +15,9 @@ An [Obsidian](https://obsidian.md/) plugin that keeps an **ordered reading queue
 
 ## Commands
 
-| Command | Action |
-|--------|--------|
-| **Open reading list** | Focus the sidebar view, or open it on the right if it is not open yet. |
+| Command                              | Action                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| **Open reading list**                | Focus the sidebar view, or open it on the right if it is not open yet.    |
 | **Add current note to reading list** | Append the active note to the end of the queue (duplicates are rejected). |
 
 Open the command palette and search for “reading list” to run these.
@@ -46,14 +46,14 @@ npm install
 
 `npm run build` writes the plugin into:
 
-`<OBSIDIAN_VAULT>/.obsidian/plugins/reading-list/`
-
-If **`OBSIDIAN_VAULT`** is unset, the build falls back to a developer default path in `esbuild.config.mjs` and `package.json`—**set it explicitly** for your vault:
+`dist/` in this repository (ignored by git), **or** your vault’s plugin folder if you opt in:
 
 ```bash
 export OBSIDIAN_VAULT=/path/to/your/vault
 npm run build
 ```
+
+With **`OBSIDIAN_VAULT`** set, output goes to `<OBSIDIAN_VAULT>/.obsidian/plugins/reading-list/` instead of `dist/`.
 
 `npm run dev` performs a non-production build (inline source maps) and copies `manifest.json` and `styles.css` to the same plugin folder.
 

@@ -1,17 +1,12 @@
 import esbuild from "esbuild";
-import path from "path";
 import process from "process";
-import { fileURLToPath } from "url";
+import path from "path";
 import builtins from "builtin-modules";
+import { getPluginOutputDir } from "./plugin-output-dir.mjs";
 
 const prod = process.argv[2] === "production";
 
-const repoRoot = path.dirname(fileURLToPath(import.meta.url));
-const releaseBuild = process.env.RELEASE_BUILD === "1";
-const vaultRoot = process.env.OBSIDIAN_VAULT || "/Users/simonturner/vault";
-const outDir = releaseBuild
-	? path.join(repoRoot, "dist")
-	: path.join(vaultRoot, ".obsidian/plugins/reading-list");
+const outDir = getPluginOutputDir();
 const outfile = path.join(outDir, "main.js");
 
 const banner = `/*

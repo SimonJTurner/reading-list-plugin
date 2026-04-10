@@ -1,0 +1,20 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"options": {
+		"typeAware": true
+	},
+	"env": {
+		"browser": true,
+		"es2021": true
+	},
+	"ignorePatterns": ["dist", "node_modules"],
+	"overrides": [
+		{
+			"files": ["esbuild.config.mjs", "plugin-output-dir.mjs", "scripts/**/*.mjs"],
+			"env": {
+				"node": true,
+				"browser": false
+			}
+		}
+	]
+}

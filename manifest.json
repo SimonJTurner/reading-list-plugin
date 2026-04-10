@@ -4,6 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "1.5.0",
 	"description": "Ordered reading queue in the sidebar. Mark items read manually; add notes via command.",
-	"author": "",
+	"author": "Simon Turner — Obsidian plugins and note-taking tools.",
+	"authorUrl": "https://github.com/SimonJTurner",
 	"isDesktopOnly": true
 }
