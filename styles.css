@@ -1,0 +1,96 @@
+.reading-list-root {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 0.5rem 0.75rem;
+	gap: 0.5rem;
+}
+
+.reading-list-hint {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	line-height: 1.4;
+}
+
+.reading-list-items {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	overflow-y: auto;
+	flex: 1;
+	min-height: 0;
+}
+
+.reading-list-row {
+	display: grid;
+	grid-template-columns: auto 1fr auto auto;
+	align-items: center;
+	gap: 0.35rem 0.5rem;
+	padding: 0.35rem 0.4rem;
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	cursor: grab;
+}
+
+.reading-list-row:active {
+	cursor: grabbing;
+}
+
+.reading-list-row.reading-list-drag-over {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 1px;
+}
+
+.reading-list-row.is-read {
+	opacity: 0.55;
+}
+
+.reading-list-row.is-read .reading-list-title {
+	text-decoration: line-through;
+}
+
+.reading-list-grip {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	user-select: none;
+	padding: 0 0.15rem;
+}
+
+.reading-list-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+	text-align: left;
+}
+
+.reading-list-title:hover {
+	color: var(--text-accent);
+}
+
+.reading-list-btn {
+	padding: 0.15rem 0.35rem;
+	font-size: var(--font-ui-smaller);
+	border-radius: var(--radius-s);
+}
+
+.reading-list-empty {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	padding: 0.5rem 0;
+}
+
+.reading-list-end-drop {
+	min-height: 2.25rem;
+	flex-shrink: 0;
+	margin-top: 0.25rem;
+	border-radius: var(--radius-s);
+	border: 1px dashed var(--background-modifier-border);
+}
+
+.reading-list-end-drop.reading-list-drag-over {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 1px;
+	border-style: solid;
+}

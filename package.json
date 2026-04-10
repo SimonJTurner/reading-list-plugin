@@ -1,0 +1,20 @@
+{
+	"name": "obsidian-reading-list",
+	"version": "1.0.0",
+	"description": "Reading list plugin for Obsidian",
+	"main": "main.js",
+	"scripts": {
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run copy-files",
+		"build:release": "tsc -noEmit -skipLibCheck && RELEASE_BUILD=1 node esbuild.config.mjs production && mkdir -p dist && cp manifest.json styles.css dist/",
+		"dev": "node esbuild.config.mjs && npm run copy-files",
+		"copy-files": "mkdir -p \"${OBSIDIAN_VAULT:-/Users/simonturner/vault}/.obsidian/plugins/reading-list\" && cp manifest.json styles.css \"${OBSIDIAN_VAULT:-/Users/simonturner/vault}/.obsidian/plugins/reading-list/\""
+	},
+	"devDependencies": {
+		"@types/node": "^20.10.0",
+		"builtin-modules": "^4.0.0",
+		"esbuild": "^0.20.0",
+		"obsidian": "1.7.2",
+		"tslib": "^2.6.2",
+		"typescript": "^5.3.3"
+	}
+}

@@ -1,0 +1,9 @@
+{
+	"id": "reading-list",
+	"name": "Reading list",
+	"version": "1.0.0",
+	"minAppVersion": "1.5.0",
+	"description": "Ordered reading queue in the sidebar. Mark items read manually; add notes via command.",
+	"author": "",
+	"isDesktopOnly": true
+}
