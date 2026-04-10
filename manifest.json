@@ -1,7 +1,7 @@
 {
 	"id": "reading-list",
 	"name": "Reading list",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.5.0",
 	"description": "Ordered reading queue in the sidebar. Mark items read manually; add notes via command.",
 	"author": "Simon Turner — Obsidian plugins and note-taking tools.",
