@@ -167,6 +167,8 @@ class ReadingListView extends ItemView {
 	render(): void {
 		this.contentEl.empty();
 		this.contentEl.addClass("reading-list-root");
+		this.contentEl.setAttr("role", "region");
+		this.contentEl.setAttr("aria-label", "Reading list");
 
 		this.contentEl.createDiv({
 			cls: "reading-list-hint",
@@ -174,6 +176,7 @@ class ReadingListView extends ItemView {
 		});
 
 		const listEl = this.contentEl.createDiv({ cls: "reading-list-items" });
+		listEl.setAttr("role", "list");
 
 		if (this.plugin.items.length === 0) {
 			listEl.createDiv({
@@ -190,13 +193,15 @@ class ReadingListView extends ItemView {
 			const missing = !(file instanceof TFile);
 
 			const row = listEl.createDiv({
-				cls: `reading-list-row${item.read ? " is-read" : ""}`,
+				cls: `setting-item reading-list-row${item.read ? " is-read" : ""}`,
 			});
+			row.setAttr("role", "listitem");
 
-			row.createDiv({ cls: "reading-list-grip", text: "⋮⋮" });
+			const infoEl = row.createDiv({ cls: "setting-item-info reading-list-info" });
+			const controlsEl = row.createDiv({ cls: "setting-item-control reading-list-controls" });
 
-			const titleEl = row.createEl("button", {
-				cls: "reading-list-title",
+			const titleEl = infoEl.createEl("button", {
+				cls: "setting-item-name reading-list-title",
 				text: missing ? `${title} (missing)` : title,
 			});
 			titleEl.addEventListener("click", () => {
@@ -207,10 +212,18 @@ class ReadingListView extends ItemView {
 				}
 			});
 
-			const readBtn = row.createEl("button", {
-				cls: `reading-list-btn reading-list-icon-btn${item.read ? " is-active" : ""}`,
+			infoEl.createDiv({
+				cls: "setting-item-description reading-list-path",
+				text: item.path,
+			});
+
+			controlsEl.createDiv({ cls: "reading-list-grip", text: "⋮⋮" });
+
+			const readBtn = controlsEl.createEl("button", {
+				cls: `clickable-icon reading-list-btn reading-list-icon-btn${item.read ? " is-active" : ""}`,
 				attr: {
 					"aria-label": item.read ? "Mark as unread" : "Mark as read",
+					"aria-pressed": item.read ? "true" : "false",
 					title: item.read ? "Mark as unread" : "Mark as read",
 				},
 			});
@@ -220,8 +233,8 @@ class ReadingListView extends ItemView {
 				this.plugin.setRead(item.path, !item.read);
 			});
 
-			const removeBtn = row.createEl("button", {
-				cls: "reading-list-btn reading-list-icon-btn is-danger",
+			const removeBtn = controlsEl.createEl("button", {
+				cls: "clickable-icon reading-list-btn reading-list-icon-btn is-danger",
 				attr: {
 					"aria-label": "Remove from reading list",
 					title: "Remove from reading list",
@@ -237,6 +250,10 @@ class ReadingListView extends ItemView {
 			row.addEventListener("dragstart", (e) => {
 				e.dataTransfer?.setData("text/plain", String(index));
 				e.dataTransfer!.effectAllowed = "move";
+				row.addClass("is-dragging");
+			});
+			row.addEventListener("dragend", () => {
+				row.removeClass("is-dragging");
 			});
 			row.addEventListener("dragover", (e) => {
 				e.preventDefault();
