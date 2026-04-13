@@ -65,6 +65,10 @@ Your queue is persisted by Obsidian as **`data.json`** next to the plugin files:
 
 Back up that file (or your whole `.obsidian` folder) if the list matters to you.
 
+## Privacy
+
+Reading list is local-only. It stores your queue in local plugin data and does not send note content, metadata, or telemetry to external services.
+
 ## Releasing (maintainers)
 
 1. Set **`version`** in `manifest.json` to a semver (e.g. `1.0.1`).
@@ -85,4 +89,4 @@ After you have a public repo and at least one release with the three files attac
 
 ## License
 
-Add a `LICENSE` file to your repository before submitting to Community Plugins (for example MIT).
+This project is licensed under the MIT License. See `LICENSE`.

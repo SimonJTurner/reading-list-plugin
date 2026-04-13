@@ -23,7 +23,7 @@
 
 .reading-list-row {
 	display: grid;
-	grid-template-columns: auto 1fr auto auto;
+	grid-template-columns: auto minmax(0, 1fr) auto auto;
 	align-items: center;
 	gap: 0.35rem 0.5rem;
 	padding: 0.35rem 0.4rem;
@@ -73,6 +73,28 @@
 	padding: 0.15rem 0.35rem;
 	font-size: var(--font-ui-smaller);
 	border-radius: var(--radius-s);
+}
+
+.reading-list-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.9rem;
+	height: 1.9rem;
+	padding: 0.2rem;
+}
+
+.reading-list-icon-btn svg {
+	width: 0.95rem;
+	height: 0.95rem;
+}
+
+.reading-list-icon-btn.is-active {
+	color: var(--interactive-accent);
+}
+
+.reading-list-icon-btn.is-danger:hover {
+	color: var(--text-error);
 }
 
 .reading-list-empty {

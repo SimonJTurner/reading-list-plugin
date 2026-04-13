@@ -1,4 +1,4 @@
-import { ItemView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, Notice, Plugin, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import {
 	removeReadingListItemByPath,
 	tryAddReadingListItem,
@@ -208,18 +208,26 @@ class ReadingListView extends ItemView {
 			});
 
 			const readBtn = row.createEl("button", {
-				cls: "reading-list-btn",
-				text: item.read ? "Unread" : "Read",
+				cls: `reading-list-btn reading-list-icon-btn${item.read ? " is-active" : ""}`,
+				attr: {
+					"aria-label": item.read ? "Mark as unread" : "Mark as read",
+					title: item.read ? "Mark as unread" : "Mark as read",
+				},
 			});
+			setIcon(readBtn, "check");
 			readBtn.addEventListener("click", (e) => {
 				e.stopPropagation();
 				this.plugin.setRead(item.path, !item.read);
 			});
 
 			const removeBtn = row.createEl("button", {
-				cls: "reading-list-btn",
-				text: "Remove",
+				cls: "reading-list-btn reading-list-icon-btn is-danger",
+				attr: {
+					"aria-label": "Remove from reading list",
+					title: "Remove from reading list",
+				},
 			});
+			setIcon(removeBtn, "trash-2");
 			removeBtn.addEventListener("click", (e) => {
 				e.stopPropagation();
 				this.plugin.removeItem(item.path);
