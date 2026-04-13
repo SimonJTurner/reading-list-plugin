@@ -1,5 +1,6 @@
 import { ItemView, Notice, Plugin, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import {
+	removeReadReadingListItems,
 	removeReadingListItemByPath,
 	tryAddReadingListItem,
 	type ReadingListItem,
@@ -34,6 +35,33 @@ export default class ReadingListPlugin extends Plugin {
 			id: "add-to-reading-list",
 			name: "Add current note to reading list",
 			callback: () => this.addCurrentNote(),
+		});
+
+		this.registerObsidianProtocolHandler("add-reading-list-item", (params) => {
+			const path = params.path?.trim();
+			const note = params.note?.trim();
+			if (!path) {
+				new Notice("Missing path for reading list item");
+				return;
+			}
+			this.addItemByPath(path, { note });
+		});
+
+		this.addCommand({
+			id: "reading-list-clear-read-items",
+			name: "Reading List: Clear Read Items",
+			callback: () => this.removeReadItems(),
+		});
+
+		this.addCommand({
+			id: "reading-list-close",
+			name: "Reading List: Close",
+			callback: () => {
+				const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_READING_LIST);
+				for (let i = leaves.length - 1; i >= 0; i--) {
+					leaves[i].detach();
+				}
+			},
 		});
 
 		this.registerEvent(
@@ -97,15 +125,42 @@ export default class ReadingListPlugin extends Plugin {
 			new Notice("Active file must be a note");
 			return;
 		}
-		const { items: next, isNew } = tryAddReadingListItem(this.items, file.path);
-		if (!isNew) {
-			new Notice("Already on reading list");
+		this.addItemByPath(file.path);
+	}
+
+	addItemByPath(path: string, options?: { note?: string; silent?: boolean }): void {
+		const normalizedPath = path.trim();
+		if (!normalizedPath) {
+			if (!options?.silent) new Notice("Path is required");
 			return;
 		}
+
+		const normalizedNote = options?.note?.trim();
+		const existing = this.items.find((item) => item.path === normalizedPath);
+		if (existing) {
+			if (normalizedNote && existing.note !== normalizedNote) {
+				existing.note = normalizedNote;
+				void this.persist();
+				this.refreshViews();
+				if (!options?.silent) new Notice("Updated reading list note");
+				return;
+			}
+			if (!options?.silent) new Notice("Already on reading list");
+			return;
+		}
+
+		const { items: next, isNew } = tryAddReadingListItem(
+			this.items,
+			normalizedPath,
+			Date.now(),
+			normalizedNote,
+		);
+		if (!isNew) return;
+
 		this.items = next;
 		void this.persist();
 		this.refreshViews();
-		new Notice("Added to reading list");
+		if (!options?.silent) new Notice("Added to reading list");
 	}
 
 	removeItem(path: string): void {
@@ -120,6 +175,19 @@ export default class ReadingListPlugin extends Plugin {
 		item.read = read;
 		void this.persist();
 		this.refreshViews();
+	}
+
+	removeReadItems(): void {
+		const before = this.items.length;
+		this.items = removeReadReadingListItems(this.items);
+		const removed = before - this.items.length;
+		if (removed === 0) {
+			new Notice("No read items to remove");
+			return;
+		}
+		void this.persist();
+		this.refreshViews();
+		new Notice(removed === 1 ? "Removed 1 read item" : `Removed ${String(removed)} read items`);
 	}
 
 	/** Drop onto row at index `dropIndex` means “insert before that row”. */
@@ -170,9 +238,20 @@ class ReadingListView extends ItemView {
 		this.contentEl.setAttr("role", "region");
 		this.contentEl.setAttr("aria-label", "Reading list");
 
-		this.contentEl.createDiv({
-			cls: "reading-list-hint",
-			text: "Top = next in queue. Drag to reorder. Read state is manual only.",
+		const headerEl = this.contentEl.createDiv({ cls: "reading-list-header" });
+		headerEl.createSpan({ cls: "reading-list-pane-title", text: "Reading List" });
+		const clearReadBtn = headerEl.createEl("button", {
+			cls: "reading-list-clear-read",
+			text: "Remove read items",
+			attr: {
+				type: "button",
+				"aria-label": "Remove all items marked as read from the list",
+			},
+		});
+		const hasReadItems = this.plugin.items.some((i) => i.read);
+		clearReadBtn.disabled = !hasReadItems;
+		clearReadBtn.addEventListener("click", () => {
+			this.plugin.removeReadItems();
 		});
 
 		const listEl = this.contentEl.createDiv({ cls: "reading-list-items" });
@@ -183,111 +262,117 @@ class ReadingListView extends ItemView {
 				cls: "reading-list-empty",
 				text: "Empty. Use “Add current note to reading list” from the command palette.",
 			});
-			return;
-		}
+		} else {
+			this.plugin.items.forEach((item, index) => {
+				const file = this.app.vault.getAbstractFileByPath(item.path);
+				const title =
+					file instanceof TFile ? file.basename : (item.path.split("/").pop() ?? item.path);
+				const missing = !(file instanceof TFile);
 
-		this.plugin.items.forEach((item, index) => {
-			const file = this.app.vault.getAbstractFileByPath(item.path);
-			const title =
-				file instanceof TFile ? file.basename : (item.path.split("/").pop() ?? item.path);
-			const missing = !(file instanceof TFile);
+				const row = listEl.createDiv({
+					cls: `setting-item reading-list-row${item.read ? " is-read" : ""}`,
+				});
+				row.setAttr("role", "listitem");
 
-			const row = listEl.createDiv({
-				cls: `setting-item reading-list-row${item.read ? " is-read" : ""}`,
-			});
-			row.setAttr("role", "listitem");
+				const infoEl = row.createDiv({ cls: "setting-item-info reading-list-info" });
 
-			const infoEl = row.createDiv({ cls: "setting-item-info reading-list-info" });
-			const controlsEl = row.createDiv({ cls: "setting-item-control reading-list-controls" });
+				const titleEl = infoEl.createEl("button", {
+					cls: "setting-item-name reading-list-title",
+					text: missing ? `${title} (missing)` : title,
+				});
+				titleEl.addEventListener("click", () => {
+					if (file instanceof TFile) {
+						void this.app.workspace.getLeaf(false).openFile(file);
+					} else {
+						new Notice("File not found in vault");
+					}
+				});
 
-			const titleEl = infoEl.createEl("button", {
-				cls: "setting-item-name reading-list-title",
-				text: missing ? `${title} (missing)` : title,
-			});
-			titleEl.addEventListener("click", () => {
-				if (file instanceof TFile) {
-					void this.app.workspace.getLeaf(false).openFile(file);
-				} else {
-					new Notice("File not found in vault");
+				const metaRowEl = infoEl.createDiv({ cls: "reading-list-meta-row" });
+				metaRowEl.createDiv({
+					cls: "setting-item-description reading-list-path",
+					text: item.path,
+				});
+				if (item.note) {
+					metaRowEl.createDiv({
+						cls: "setting-item-description reading-list-note",
+						text: item.note,
+					});
 				}
+
+				const controlsEl = metaRowEl.createDiv({ cls: "reading-list-controls" });
+				controlsEl.createDiv({ cls: "reading-list-grip", text: "⋮⋮" });
+
+				const readBtn = controlsEl.createEl("button", {
+					cls: `clickable-icon reading-list-btn reading-list-icon-btn${item.read ? " is-active" : ""}`,
+					attr: {
+						"aria-label": item.read ? "Mark as unread" : "Mark as read",
+						"aria-pressed": item.read ? "true" : "false",
+						title: item.read ? "Mark as unread" : "Mark as read",
+					},
+				});
+				setIcon(readBtn, "check");
+				readBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					this.plugin.setRead(item.path, !item.read);
+				});
+
+				const removeBtn = controlsEl.createEl("button", {
+					cls: "clickable-icon reading-list-btn reading-list-icon-btn is-danger",
+					attr: {
+						"aria-label": "Remove from reading list",
+						title: "Remove from reading list",
+					},
+				});
+				setIcon(removeBtn, "trash-2");
+				removeBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					this.plugin.removeItem(item.path);
+				});
+
+				row.setAttr("draggable", "true");
+				row.addEventListener("dragstart", (e) => {
+					e.dataTransfer?.setData("text/plain", String(index));
+					e.dataTransfer!.effectAllowed = "move";
+					row.addClass("is-dragging");
+				});
+				row.addEventListener("dragend", () => {
+					row.removeClass("is-dragging");
+				});
+				row.addEventListener("dragover", (e) => {
+					e.preventDefault();
+					e.dataTransfer!.dropEffect = "move";
+					row.addClass("reading-list-drag-over");
+				});
+				row.addEventListener("dragleave", () => {
+					row.removeClass("reading-list-drag-over");
+				});
+				row.addEventListener("drop", (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					row.removeClass("reading-list-drag-over");
+					const from = parseInt(e.dataTransfer?.getData("text/plain") ?? "", 10);
+					if (Number.isNaN(from)) return;
+					this.plugin.reorderDrag(from, index);
+				});
 			});
 
-			infoEl.createDiv({
-				cls: "setting-item-description reading-list-path",
-				text: item.path,
-			});
-
-			controlsEl.createDiv({ cls: "reading-list-grip", text: "⋮⋮" });
-
-			const readBtn = controlsEl.createEl("button", {
-				cls: `clickable-icon reading-list-btn reading-list-icon-btn${item.read ? " is-active" : ""}`,
-				attr: {
-					"aria-label": item.read ? "Mark as unread" : "Mark as read",
-					"aria-pressed": item.read ? "true" : "false",
-					title: item.read ? "Mark as unread" : "Mark as read",
-				},
-			});
-			setIcon(readBtn, "check");
-			readBtn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				this.plugin.setRead(item.path, !item.read);
-			});
-
-			const removeBtn = controlsEl.createEl("button", {
-				cls: "clickable-icon reading-list-btn reading-list-icon-btn is-danger",
-				attr: {
-					"aria-label": "Remove from reading list",
-					title: "Remove from reading list",
-				},
-			});
-			setIcon(removeBtn, "trash-2");
-			removeBtn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				this.plugin.removeItem(item.path);
-			});
-
-			row.setAttr("draggable", "true");
-			row.addEventListener("dragstart", (e) => {
-				e.dataTransfer?.setData("text/plain", String(index));
-				e.dataTransfer!.effectAllowed = "move";
-				row.addClass("is-dragging");
-			});
-			row.addEventListener("dragend", () => {
-				row.removeClass("is-dragging");
-			});
-			row.addEventListener("dragover", (e) => {
+			const endDrop = listEl.createDiv({ cls: "reading-list-end-drop" });
+			endDrop.addEventListener("dragover", (e) => {
 				e.preventDefault();
 				e.dataTransfer!.dropEffect = "move";
-				row.addClass("reading-list-drag-over");
+				endDrop.addClass("reading-list-drag-over");
 			});
-			row.addEventListener("dragleave", () => {
-				row.removeClass("reading-list-drag-over");
+			endDrop.addEventListener("dragleave", () => {
+				endDrop.removeClass("reading-list-drag-over");
 			});
-			row.addEventListener("drop", (e) => {
+			endDrop.addEventListener("drop", (e) => {
 				e.preventDefault();
-				e.stopPropagation();
-				row.removeClass("reading-list-drag-over");
+				endDrop.removeClass("reading-list-drag-over");
 				const from = parseInt(e.dataTransfer?.getData("text/plain") ?? "", 10);
 				if (Number.isNaN(from)) return;
-				this.plugin.reorderDrag(from, index);
+				this.plugin.reorderDrag(from, this.plugin.items.length);
 			});
-		});
-
-		const endDrop = listEl.createDiv({ cls: "reading-list-end-drop" });
-		endDrop.addEventListener("dragover", (e) => {
-			e.preventDefault();
-			e.dataTransfer!.dropEffect = "move";
-			endDrop.addClass("reading-list-drag-over");
-		});
-		endDrop.addEventListener("dragleave", () => {
-			endDrop.removeClass("reading-list-drag-over");
-		});
-		endDrop.addEventListener("drop", (e) => {
-			e.preventDefault();
-			endDrop.removeClass("reading-list-drag-over");
-			const from = parseInt(e.dataTransfer?.getData("text/plain") ?? "", 10);
-			if (Number.isNaN(from)) return;
-			this.plugin.reorderDrag(from, this.plugin.items.length);
-		});
+		}
 	}
 }
